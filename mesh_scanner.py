@@ -30,9 +30,10 @@ class ScanMeshes(bpy.types.Operator):
                 pivots.pop(p_index)
 
         for obj in objs:
-            box_c, box_s = util.get_box([obj])
+            box = util.get_box([obj])
+            box_c, box_s = box
 
-            regions = self.sort_regions(obj.location, main_box, pivots)
+            regions = self.sort_regions(obj.location, pivots)
 
             print(box_c, box_s)
             print(obj, regions)
@@ -44,14 +45,13 @@ class ScanMeshes(bpy.types.Operator):
                     new_item.obj = obj
 
                 for r in range(1, len(regions)):
-                    if util.is_in_box(regions[r].location, box_c, box_s):
+                    if util.is_in_box(regions[r].location, box):
                         new_item = regions[r].region_group.add()
                         new_item.obj = obj
 
-    def sort_regions(self, vert: Vector, box, regions: list):
-        if (not util.is_in_box(vert, box)):
-            return
+        print("")
 
+    def sort_regions(self, vert: Vector, regions: list):
         regions.sort(key=lambda p: (vert - p.location).magnitude)
 
         return regions
