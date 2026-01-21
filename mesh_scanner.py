@@ -25,27 +25,33 @@ class ScanMeshes(bpy.types.Operator):
 
     def _cache_meshes_by_region(self, objs, pivots):
         main_box = util.get_box(objs)
+        for p_index in range(0, len(pivots)):
+            if not util.is_in_box(pivots[p_index].location, main_box):
+                pivots.pop(p_index)
+
         for obj in objs:
             box_c, box_s = util.get_box([obj])
-            regions = self.find_regions(obj.location, main_box, pivots)
+
+            regions = self.sort_regions(obj.location, main_box, pivots)
 
             print(box_c, box_s)
             print(obj, regions)
             print("----------")
 
-            new_item = regions[0].region_group.add()
-            new_item.obj = obj
-
-            for r in range(1, len(regions)):
-                if util.is_in_box(regions[r].location, box_c, box_s):
-                    new_item = regions[r].region_group.add()
+            if regions is not None:
+                if len(regions) >= 1:
+                    new_item = regions[0].region_group.add()
                     new_item.obj = obj
 
-    def find_regions(self, vert: Vector, box, regions: list):
-        """Finds the regions a mesh belongs to"""
-        box_c, box_s = box
-        if (not util.is_in_box(vert, box_c, box_s)):
+                for r in range(1, len(regions)):
+                    if util.is_in_box(regions[r].location, box_c, box_s):
+                        new_item = regions[r].region_group.add()
+                        new_item.obj = obj
+
+    def sort_regions(self, vert: Vector, box, regions: list):
+        if (not util.is_in_box(vert, box)):
             return
+
         regions.sort(key=lambda p: (vert - p.location).magnitude)
 
         return regions

@@ -75,31 +75,41 @@ def parent_bones(rig, parent, child, is_offset=True):
         bpy.ops.armature.parent_set(type='CONNECTED')
 
 
+def score_vector(x: Vector, axis: Vector):
+    return x.normalized().dot(axis.normalized()) + x.magnitude
+
+
 def get_box(objs: list):
     min_v = Vector()
     max_v = Vector()
-
-    def score_v(x): return x.normalized().dot(
-        Vector((1, 1, 1)).normalized()) + x.magnitude
+    axis = Vector((1, 1, 1))
+    centers = []
 
     for obj in objs:
         for mesh_obj in iter_mesh_objects(obj):
             for corner in mesh_obj.bound_box:
                 corner_v = Vector(corner)
                 corner_v = mesh_obj.matrix_world @ corner_v
-                if score_v(min_v) == 0 or score_v(corner_v) < score_v(min_v):
+                min_score = score_vector(min_v, axis)
+
+                if min_score == 0 or score_vector(corner_v, axis) < min_score:
                     min_v = corner_v
-                if score_v(corner_v) > score_v(max_v):
+
+                if score_vector(corner_v, axis) > score_vector(max_v, axis):
                     max_v = corner_v
+        centers.append(max_v.lerp(min_v, .5))
 
-    diagonal_solid = (max_v - min_v).magnitude
+    center = sum(centers, Vector()) / len(centers)
+    diagonal_solid = (center - min_v).magnitude
     side_length = diagonal_solid / math.sqrt(3)
-    center = max_v.lerp(min_v, .5)
-    return (center, side_length/2)
+    return (center, side_length)
+
+    # simple box aabb
 
 
-# simple box aabb
-def is_in_box(point: Vector, origin: Vector, side_length: float):
+def is_in_box(point: Vector, box: tuple):
+    origin, side_length = box
+    print(point, origin, side_length)
     return (
         point.x <= origin.x + side_length and
         point.x >= origin.x - side_length and
