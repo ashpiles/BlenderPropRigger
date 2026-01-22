@@ -25,30 +25,32 @@ class ScanMeshes(bpy.types.Operator):
 
     def _cache_meshes_by_region(self, objs, pivots):
         main_box = util.get_box(objs)
-        for p_index in range(0, len(pivots)):
-            if not util.is_in_box(pivots[p_index].location, main_box):
-                pivots.pop(p_index)
+        filtered_pivots = filter(
+            lambda p: util.is_in_box(p.location, main_box), pivots)
+        regions = list(filtered_pivots)
 
+        print(main_box)
         for obj in objs:
             box = util.get_box([obj])
             box_c, box_s = box
 
-            regions = self.sort_regions(obj.location, pivots)
+            regions = self.sort_regions(obj.location, regions)
 
             print(box_c, box_s)
-            print(obj, regions)
-            print("----------")
 
             if regions is not None:
                 if len(regions) >= 1:
+                    print("added ", obj, "\nto ", regions[0])
                     new_item = regions[0].region_group.add()
                     new_item.obj = obj
 
                 for r in range(1, len(regions)):
                     if util.is_in_box(regions[r].location, box):
+                        print("added ", obj, "\nto ", regions[r])
                         new_item = regions[r].region_group.add()
                         new_item.obj = obj
 
+        print("----------")
         print("")
 
     def sort_regions(self, vert: Vector, regions: list):

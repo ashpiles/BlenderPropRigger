@@ -75,45 +75,31 @@ def parent_bones(rig, parent, child, is_offset=True):
         bpy.ops.armature.parent_set(type='CONNECTED')
 
 
-def score_vector(x: Vector, axis: Vector):
-    return x.normalized().dot(axis.normalized()) + x.magnitude
-
-
 def get_box(objs: list):
-    min_v = Vector()
-    max_v = Vector()
-    axis = Vector((1, 1, 1))
-    centers = []
+    min_v = Vector((math.inf, math.inf, math.inf))
+    max_v = Vector((-math.inf, -math.inf, -math.inf))
 
     for obj in objs:
         for mesh_obj in iter_mesh_objects(obj):
             for corner in mesh_obj.bound_box:
-                corner_v = Vector(corner)
-                corner_v = mesh_obj.matrix_world @ corner_v
-                min_score = score_vector(min_v, axis)
+                world_corner = mesh_obj.matrix_world @ Vector(corner)
+                min_v.x = min(min_v.x, world_corner.x)
+                min_v.y = min(min_v.y, world_corner.y)
+                min_v.z = min(min_v.z, world_corner.z)
 
-                if min_score == 0 or score_vector(corner_v, axis) < min_score:
-                    min_v = corner_v
+                max_v.x = max(max_v.x, world_corner.x)
+                max_v.y = max(max_v.y, world_corner.y)
+                max_v.z = max(max_v.z, world_corner.z)
 
-                if score_vector(corner_v, axis) > score_vector(max_v, axis):
-                    max_v = corner_v
-        centers.append(max_v.lerp(min_v, .5))
-
-    center = sum(centers, Vector()) / len(centers)
-    diagonal_solid = (center - min_v).magnitude
-    side_length = diagonal_solid / math.sqrt(3)
-    return (center, side_length)
-
-    # simple box aabb
+    center = (min_v + max_v) * 0.5
+    half_size = (max_v - min_v) * 0.5
+    return center, half_size
 
 
 def is_in_box(point: Vector, box: tuple):
-    origin, side_length = box
-    print(point, origin, side_length)
+    origin, half_size = box
     return (
-        point.x <= origin.x + side_length and
-        point.x >= origin.x - side_length and
-        point.y <= origin.y + side_length and
-        point.y >= origin.y - side_length and
-        point.z <= origin.z + side_length and
-        point.z >= origin.z - side_length)
+        origin.x - half_size.x <= point.x <= origin.x + half_size.x and
+        origin.y - half_size.y <= point.y <= origin.y + half_size.y and
+        origin.z - half_size.z <= point.z <= origin.z + half_size.z
+    )
