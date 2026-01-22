@@ -1,4 +1,5 @@
 import bpy
+import re
 from mathutils import Vector
 from . import blender_util as util
 
@@ -10,7 +11,8 @@ class ScanMeshes(bpy.types.Operator):
     def execute(self, context):
         pivots = []
         for obj in bpy.context.scene.objects:
-            if obj.data is None and obj.name.endswith("Pivot"):
+            pivot_search = re.compile(r'Pivot($|\.\d+)')
+            if obj.data is None and pivot_search.search(obj.name) is not None:
                 pivots.append(obj)
 
         mesh_objs = []

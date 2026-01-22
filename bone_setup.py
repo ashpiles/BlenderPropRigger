@@ -15,7 +15,7 @@ class BoneSetup():
         self.pivot_name = pivot.name
         self.loc = pivot.location
         self.rot = pivot.rotation_quaternion
-        self.objs = pivot["region_item"]
+        self.objs = pivot.region_group
         self.length = pivot.empty_display_size
 
         pivot_obj = bpy.data.objects.get(self.pivot_name)
