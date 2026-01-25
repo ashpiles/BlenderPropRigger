@@ -35,9 +35,4 @@ class CreatePivot(bpy.types.Operator):
         pivot.name = self.bone_type+"_Pivot"
         pivot["bone_type"] = self.bone_type
 
-        # Add an example item
-        item = pivot.region_group.add()
-        item.obj = context.active_object
-        item.vgroup_name = ""
-
         return {'FINISHED'}

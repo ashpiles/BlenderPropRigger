@@ -18,6 +18,9 @@ class ScanMeshes(bpy.types.Operator):
 
     def execute(self, context):
         mesh_objs = []
+        scan = bpy.context.scene.mesh_scan
+        scan.pivots.clear()
+
         for obj in bpy.context.selected_objects:
             if type(obj.data) is bpy.types.Mesh:
                 mesh_objs.append(obj)
@@ -27,8 +30,6 @@ class ScanMeshes(bpy.types.Operator):
 
         if len(pivots) >= 1:
             self._cache_meshes_by_region(mesh_objs, pivots)
-
-        scan = bpy.context.scene.mesh_scan
 
         scan.scan_volume.origin = main_box.origin
         scan.scan_volume.half_size = main_box.half_size

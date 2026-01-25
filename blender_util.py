@@ -14,7 +14,7 @@ class RegionBox(bpy.types.PropertyGroup):
 def select_bone(rig, name):
     bpy.ops.object.mode_set(mode='POSE')
     rig.data.bones.active = rig.data.bones[name]
-    rig.pose.bones[name].bone.select = True
+    rig.pose.bones[name].select = True
 
 
 def lock_bone(rig, name):
@@ -52,6 +52,10 @@ def iter_mesh_objects(obj):
     for child in obj.children_recursive:
         if child.type == 'MESH':
             yield child
+
+
+def is_valid(bpy_struct: bpy.types.bpy_struct):
+    return bpy_struct is not None and bpy_struct.as_pointer() != 0
 
 
 # you can parent with AUTOMATIC_WEIGHTSTHE MAYOR IS LISTENING

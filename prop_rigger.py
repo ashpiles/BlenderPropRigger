@@ -1,5 +1,6 @@
 import bpy
 from . import bone_setup
+from . import blender_util as util
 
 
 class MakePropRig(bpy.types.Operator):
@@ -18,12 +19,18 @@ class MakePropRig(bpy.types.Operator):
         bpy.context.view_layer.objects.active = rig
         bpy.ops.object.mode_set(mode='EDIT')
 
+        print(scan_result.pivots)
         for region in scan_result.pivots:
-            pivot = bpy.context.collection.objects[region.name]
-            match pivot['bone_type']:
-                case 'ROOT':
-                    setup = bone_setup.RootBoneSetup(pivot)
-                    setup.set_bone(armature, rig)
+            try:
+                pivot = bpy.context.collection.objects[region.name]
+            except KeyError:
+                pivot = None
+
+            if pivot is not None:
+                match pivot['bone_type']:
+                    case 'ROOT':
+                        setup = bone_setup.RootBoneSetup(pivot)
+                        setup.set_bone(armature, rig)
         return {'FINISHED'}
 
 

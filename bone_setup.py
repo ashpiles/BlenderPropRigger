@@ -17,8 +17,8 @@ class BoneSetup():
         self.bone_type = pivot['bone_type']
         self.loc = pivot.location
         self.rot = pivot.rotation_quaternion
-        self.objs = pivot.region_group
         self.length = pivot.empty_display_size
+        self.objs = [p.obj for p in list(pivot.region_group)]
 
         pivot_obj = bpy.data.objects.get(self.pivot_name)
         bpy.data.objects.remove(pivot_obj, do_unlink=True)
@@ -55,17 +55,16 @@ class BoneSetup():
         bpy.ops.object.mode_set(mode='POSE')
         rig.select_set(True)
 
-        rig.data.bones.active = rig.data.bones[mch_name]
-        rig.pose.bones[mch_name].bone.select = True
+        util.select_bone(rig, mch_name)
         bpy.context.active_bone.use_deform = False
 
-        rig.pose.bones[ctrl_name].bone.select = True
-        rig.data.bones.active = rig.data.bones[ctrl_name]
+        util.select_bone(rig, ctrl_name)
         bpy.context.active_bone.use_deform = False
 
-        util.parent_bones(rig, 'root', mch_name)
-        util.parent_bones(rig, mch_name, def_name)
-        util.parent_bones(rig, 'root', ctrl_name)
+        # need a better default root parenting startegy
+        # util.parent_bones(rig, 'root', mch_name)
+        # util.parent_bones(rig, mch_name, def_name)
+        # util.parent_bones(rig, 'root', ctrl_name)
 
         # lock loc, scale, & rot of mch
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -87,14 +86,15 @@ class BoneSetup():
         bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode='POSE')
 
-        for obj in self.objs:
-            if obj:
-                obj.select_set(True)
+        # here i need a better setting strat
+        # need to deal with sharing objs with another def bone
+        for obj in self.objs:  # why do we have 2 of the same pivot?
+            if obj is not None:
+                print(obj)
 
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
-        rig.pose.bones[bone_name].bone.select = True
-        rig.data.bones.active = rig.data.bones[bone_name]
+        util.select_bone(rig, bone_name)
         bpy.ops.object.parent_set(type='BONE', keep_transform=True)
 
 # Check up on the armature creation
@@ -114,7 +114,7 @@ class BoneSetup():
 
 
 """
-the relation ship between objs and regions are a bit complicated
+the relationship between objs and regions are a bit complicated
 As a region by default will have many objs to parent
 however sometimes objs will share regions
 
