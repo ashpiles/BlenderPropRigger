@@ -33,6 +33,7 @@ class CreatePivot(bpy.types.Operator):
             type=RegionItem)
         pivot = bpy.context.object
         pivot.name = self.bone_type+"_Pivot"
+        pivot["bone_type"] = self.bone_type
 
         # Add an example item
         item = pivot.region_group.add()

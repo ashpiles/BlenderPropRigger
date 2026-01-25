@@ -1,8 +1,14 @@
 import bpy
 import math
+import re
 from mathutils import (
     Vector,
 )
+
+
+class RegionBox(bpy.types.PropertyGroup):
+    origin: bpy.props.FloatVectorProperty()
+    half_size: bpy.props.FloatVectorProperty()
 
 
 def select_bone(rig, name):
@@ -48,10 +54,10 @@ def iter_mesh_objects(obj):
             yield child
 
 
-# you can parent with AUTOMATIC_WEIGHTS
+# you can parent with AUTOMATIC_WEIGHTSTHE MAYOR IS LISTENING
 # so what i need is a way to figure out the range we are
 # parenting bones
-def parent_bones(rig, parent, child, is_offset=True):
+def parent_bones(rig, parent, child, parent_type='OFFSET'):
     bpy.ops.object.mode_set(mode='EDIT')
 
     ebones = rig.data.edit_bones
@@ -69,10 +75,18 @@ def parent_bones(rig, parent, child, is_offset=True):
     ebones[parent].select = True
     ebones.active = ebones[parent]
 
-    if is_offset:
-        bpy.ops.armature.parent_set(type='OFFSET')
-    else:
-        bpy.ops.armature.parent_set(type='CONNECTED')
+    bpy.ops.armature.parent_set(type=parent_type)
+
+
+def get_pivots(box: RegionBox):
+    pivots = []
+    for obj in bpy.context.scene.objects:
+        pivot_search = re.compile(r'Pivot($|\.\d+)')
+        if obj.data is None and pivot_search.search(obj.name) is not None:
+            pivots.append(obj)
+
+    filtered_pivots = filter(lambda p: is_in_box(p.location, box), pivots)
+    return list(filtered_pivots)
 
 
 def get_box(objs: list):
@@ -90,14 +104,15 @@ def get_box(objs: list):
                 max_v.x = max(max_v.x, world_corner.x)
                 max_v.y = max(max_v.y, world_corner.y)
                 max_v.z = max(max_v.z, world_corner.z)
+    box = bpy.context.scene.region_boxes.add()
+    box.origin = (min_v + max_v) * 0.5
+    box.half_size = (max_v - min_v) * 0.5
+    return box
 
-    center = (min_v + max_v) * 0.5
-    half_size = (max_v - min_v) * 0.5
-    return center, half_size
 
-
-def is_in_box(point: Vector, box: tuple):
-    origin, half_size = box
+def is_in_box(point: Vector, box: RegionBox):
+    origin = Vector(box.origin)
+    half_size = Vector(box.half_size)
     return (
         origin.x - half_size.x <= point.x <= origin.x + half_size.x and
         origin.y - half_size.y <= point.y <= origin.y + half_size.y and

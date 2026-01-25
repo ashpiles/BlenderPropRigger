@@ -1,5 +1,5 @@
-from . import blender_util as util
 import bpy
+from . import bone_setup
 
 
 class MakePropRig(bpy.types.Operator):
@@ -7,19 +7,23 @@ class MakePropRig(bpy.types.Operator):
     bl_idname = "wm.prop_auto_rig"
     bl_label = "Make prop Auto Rig"
 
-    # this is making extras
     def execute(self, context):
+        bpy.ops.wm.mesh_scanner()
 
-        pivots = []
-        pos, scale = util.get_mesh_info(bpy.context.selected_objects)
-
-        armature = bpy.data.armatures.new("Gun_Armature")
-        rig = bpy.data.objects.new("Gun_Armature", armature)
-
+        scan_result = bpy.context.scene.mesh_scan
+        armature = bpy.data.armatures.new("Prop_Armature")
+        rig = bpy.data.objects.new("Prop_Armature", armature)
         bpy.context.collection.objects.link(rig)
 
         bpy.context.view_layer.objects.active = rig
         bpy.ops.object.mode_set(mode='EDIT')
+
+        for region in scan_result.pivots:
+            pivot = bpy.context.collection.objects[region.name]
+            match pivot['bone_type']:
+                case 'ROOT':
+                    setup = bone_setup.RootBoneSetup(pivot)
+                    setup.set_bone(armature, rig)
         return {'FINISHED'}
 
 
@@ -46,4 +50,4 @@ class PropRiggerPanel(bpy.types.Panel):
         row.operator("wm.create_pivot")
 
         row = layout.row()
-        row.operator("wm.scan_meshes")
+        row.operator("wm.prop_auto_rig")

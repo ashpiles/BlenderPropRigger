@@ -11,8 +11,10 @@ class BoneSetup():
     bone_type_desc = "default"
 
     def __init__(self, pivot):
+        # consume the pivot for other operations
         pivot.rotation_mode = 'QUATERNION'
         self.pivot_name = pivot.name
+        self.bone_type = pivot['bone_type']
         self.loc = pivot.location
         self.rot = pivot.rotation_quaternion
         self.objs = pivot.region_group
@@ -26,7 +28,7 @@ class BoneSetup():
         pass
 
     # apply rotation eventually
-    def _make_bones(self, arm, bone_name):
+    def _make_bones(self, bone_name, arm):
         bpy.ops.object.mode_set(mode='EDIT')
         def_bone = arm.edit_bones.new("DEF_"+bone_name)
         def_bone.head = self.loc
@@ -45,13 +47,10 @@ class BoneSetup():
     def _basic_bone_setup(self, arm, rig):
         bpy.ops.object.mode_set(mode='EDIT')
         def_name, mch_name, ctrl_name = self._make_bones(
-            arm, self.bone_type+"_bone")
-
+            self.bone_type+"_bone", arm,)
         # apply rotation
-
         util.set_bone_rot(def_name, self.rot)
         util.set_bone_rot(mch_name, self.rot)
-
         # Remove deforms of non-deform bones
         bpy.ops.object.mode_set(mode='POSE')
         rig.select_set(True)
@@ -94,9 +93,70 @@ class BoneSetup():
 
         rig.select_set(True)
         bpy.context.view_layer.objects.active = rig
-
         rig.pose.bones[bone_name].bone.select = True
-
         rig.data.bones.active = rig.data.bones[bone_name]
-
         bpy.ops.object.parent_set(type='BONE', keep_transform=True)
+
+# Check up on the armature creation
+
+# root bone
+# - denotes the root
+# standard bone
+# - does nothing special
+# sliding bone
+# - only slides
+# hinge bone
+# - rotates around a hinge
+# spin bone
+# - spins it self
+# squish bone
+# - controls scale
+
+
+"""
+the relation ship between objs and regions are a bit complicated
+As a region by default will have many objs to parent
+however sometimes objs will share regions
+
+to deal with this i will treat objects with multiple regions will
+need to check if its the same type of region and then implement different
+parenting strategies
+for example if it is a different type then they should behave as normal
+however if it is of the same type they must then skin with automatic weights
+"""
+
+
+class RootBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+    def _bone_strategy(self, arm, rig):
+        def_name, mch_name, ctrl_name = self._basic_bone_setup(arm, rig)
+
+        bpy.ops.object.mode_set(mode='POSE')
+        util.select_bone(rig, mch_name)
+
+        bpy.ops.pose.constraint_add(type='COPY_LOCATION')
+        constraint = bpy.context.object.pose.bones[mch_name].constraints["Copy Location"]
+        constraint.target = rig
+        constraint.subtarget = ctrl_name
+        constraint.target_space = 'LOCAL'
+        constraint.owner_space = 'LOCAL'
+
+        util.select_bone(rig, mch_name)
+        bpy.ops.pose.constraint_add(type='COPY_ROTATION')
+
+        constraint = bpy.context.object.pose.bones[mch_name].constraints["Copy Rotation"]
+        constraint.target = rig
+        constraint.subtarget = ctrl_name
+        constraint.mix_mode = 'BEFORE'
+        constraint.target_space = 'LOCAL'
+        constraint.owner_space = 'LOCAL'
+
+        util.select_bone(rig, ctrl_name)
+        # bpy.context.active_pose_bone.custom_shape = bpy.data.objects["Generic_Gizmo"]
+
+        util.hide_bones(rig, [mch_name, def_name])
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        return arm.edit_bones[def_name]
