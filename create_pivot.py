@@ -18,7 +18,12 @@ class CreatePivot(bpy.types.Operator):
         items=[
             ('ROOT', "Root", "Root bone in mesh"),
             ('CHAIN', "Chain", "Bone in a chain, has no control gizmo"),
-            ('HINGE', "Hinge", "Bone that moves on a hinge")
+            ('HINGE', "Hinge", "Bone that moves on a hinge"),
+            ('STANDARD', "Standard", "Standard Bone control"),
+            ('SLIDE', "Slide", "Bone which moves only on a given axis"),
+            ('SQUISH', "Squish", "Bone which controls the scale"),
+            ('SPIN', "Spin", "Bone which rotates around itself")
+
         ]
     )
 

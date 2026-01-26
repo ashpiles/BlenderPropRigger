@@ -62,9 +62,9 @@ class BoneSetup():
         bpy.context.active_bone.use_deform = False
 
         # need a better default root parenting startegy
-        # util.parent_bones(rig, 'root', mch_name)
-        # util.parent_bones(rig, mch_name, def_name)
-        # util.parent_bones(rig, 'root', ctrl_name)
+        util.parent_bones(rig, 'MCH_ROOT_bone', mch_name)
+        util.parent_bones(rig, mch_name, def_name)
+        util.parent_bones(rig, 'MCH_ROOT_bone', ctrl_name)
 
         # lock loc, scale, & rot of mch
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -76,11 +76,11 @@ class BoneSetup():
 
     # Manages pivot input for bone creation/ parenting strategy
     def set_bone(self, arm, rig):
-        bone = self._bone_strategy(arm, rig)
-        if not bone:
+        def_bone = self._bone_strategy(arm, rig)
+        if not def_bone:
             return
 
-        bone_name = bone.name
+        bone_name = def_bone.name
 
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
@@ -88,8 +88,9 @@ class BoneSetup():
 
         # here i need a better setting strat
         # need to deal with sharing objs with another def bone
-        for obj in self.objs:  # why do we have 2 of the same pivot?
+        for obj in self.objs:
             if obj is not None:
+                obj.select_set(True)
                 print(obj)
 
         rig.select_set(True)
@@ -131,32 +132,102 @@ class RootBoneSetup(BoneSetup):
         super().__init__(pivot)
 
     def _bone_strategy(self, arm, rig):
-        def_name, mch_name, ctrl_name = self._basic_bone_setup(arm, rig)
+        def_name, mch_name, ctrl_name = self._root_bone_setup(arm, rig)
 
         bpy.ops.object.mode_set(mode='POSE')
         util.select_bone(rig, mch_name)
+        pbone = rig.pose.bones[mch_name]
 
-        bpy.ops.pose.constraint_add(type='COPY_LOCATION')
-        constraint = bpy.context.object.pose.bones[mch_name].constraints["Copy Location"]
-        constraint.target = rig
-        constraint.subtarget = ctrl_name
-        constraint.target_space = 'LOCAL'
-        constraint.owner_space = 'LOCAL'
+        c = pbone.constraints.new(type='COPY_TRANSFORMS')
+        c.target = rig
+        c.subtarget = ctrl_name
+        c.mix_mode = 'REPLACE'
+        c.target_space = 'WORLD'
+        c.owner_space = 'WORLD'
 
-        util.select_bone(rig, mch_name)
-        bpy.ops.pose.constraint_add(type='COPY_ROTATION')
-
-        constraint = bpy.context.object.pose.bones[mch_name].constraints["Copy Rotation"]
-        constraint.target = rig
-        constraint.subtarget = ctrl_name
-        constraint.mix_mode = 'BEFORE'
-        constraint.target_space = 'LOCAL'
-        constraint.owner_space = 'LOCAL'
-
-        util.select_bone(rig, ctrl_name)
+        # util.select_bone(rig, ctrl_name)
         # bpy.context.active_pose_bone.custom_shape = bpy.data.objects["Generic_Gizmo"]
 
         util.hide_bones(rig, [mch_name, def_name])
 
         bpy.ops.object.mode_set(mode='EDIT')
         return arm.edit_bones[def_name]
+
+    def _root_bone_setup(self, arm, rig):
+        bpy.ops.object.mode_set(mode='EDIT')
+        def_name, mch_name, ctrl_name = self._make_bones(
+            self.bone_type+"_bone", arm,)
+        # apply rotation
+        util.set_bone_rot(def_name, self.rot)
+        util.set_bone_rot(mch_name, self.rot)
+        # Remove deforms of non-deform bones
+        bpy.ops.object.mode_set(mode='POSE')
+        rig.select_set(True)
+
+        util.select_bone(rig, mch_name)
+        bpy.context.active_bone.use_deform = False
+
+        util.select_bone(rig, ctrl_name)
+        bpy.context.active_bone.use_deform = False
+
+        util.parent_bones(rig, mch_name, def_name)
+
+        # lock loc, scale, & rot of mch
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        util.lock_bone(rig, mch_name)
+        util.lock_bone(rig, def_name)
+
+        return (def_name, mch_name, ctrl_name)
+
+
+class StandardBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+    def _bone_strategy(self, arm, rig):
+        def_name, mch_name, ctrl_name = self._basic_bone_setup(arm, rig)
+
+        bpy.ops.object.mode_set(mode='POSE')
+        util.select_bone(rig, mch_name)
+        pbone = rig.pose.bones[mch_name]
+
+        c = pbone.constraints.new(type='COPY_TRANSFORMS')
+        c.target = rig
+        c.subtarget = ctrl_name
+        c.mix_mode = 'BEFORE'
+        c.target_space = 'LOCAL'
+        c.owner_space = 'LOCAL'
+
+        # util.select_bone(rig, ctrl_name)
+        # bpy.context.active_pose_bone.custom_shape = bpy.data.objects["Generic_Gizmo"]
+
+        util.hide_bones(rig, [mch_name, def_name])
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        return arm.edit_bones[def_name]
+
+
+class ChainBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+
+class SlideBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+
+class SquishBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+
+class SpinBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)
+
+
+class HingeBoneSetup(BoneSetup):
+    def __init__(self, pivot):
+        super().__init__(pivot)

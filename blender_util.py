@@ -54,10 +54,6 @@ def iter_mesh_objects(obj):
             yield child
 
 
-def is_valid(bpy_struct: bpy.types.bpy_struct):
-    return bpy_struct is not None and bpy_struct.as_pointer() != 0
-
-
 # you can parent with AUTOMATIC_WEIGHTSTHE MAYOR IS LISTENING
 # so what i need is a way to figure out the range we are
 # parenting bones
