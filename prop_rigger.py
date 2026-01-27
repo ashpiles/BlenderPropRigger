@@ -38,15 +38,14 @@ class MakePropRig(bpy.types.Operator):
 
             if pivot is not None:
                 bone_type = pivot['bone_type']
-                setup = bs.RootBoneSetup(pivot)
+                cls = bs.bone_type_class(bone_type)
+                setup = cls(pivot)
                 setup_routine[bone_type].append(setup)
 
-        print(setup_routine)
-        print(setup_routine.items())
         # consume setup objects to create rig
         for setup_type, setups in setup_routine.items():
-            print(setup_type, setups)
             for setup in setups:
+                print(setup.pivot_name)
                 setup.set_bone(armature, rig)
 
         return {'FINISHED'}

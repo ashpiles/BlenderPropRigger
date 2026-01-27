@@ -7,6 +7,25 @@ from mathutils import (
 # ensure we get all the info needed from pivot
 
 
+def bone_type_class(type: str):
+    match type:
+        case 'ROOT':
+            return RootBoneSetup
+        case 'STANDARD':
+            return StandardBoneSetup
+        case 'HINGE':
+            return HingeBoneSetup
+        case 'SPIN':
+            return SpinBoneSetup
+        case 'SLIDE':
+            return SlideBoneSetup
+        case 'SQUISH':
+            return SquishBoneSetup
+        case 'CHAIN':
+            return ChainBoneSetup
+    return BoneSetup
+
+
 class BoneSetup():
     bone_type_desc = "default"
 
@@ -62,9 +81,9 @@ class BoneSetup():
         bpy.context.active_bone.use_deform = False
 
         # need a better default root parenting startegy
-        util.parent_bones(rig, 'MCH_ROOT_bone', mch_name)
+        util.parent_bones(rig, "ROOT", mch_name)
         util.parent_bones(rig, mch_name, def_name)
-        util.parent_bones(rig, 'MCH_ROOT_bone', ctrl_name)
+        util.parent_bones(rig, "ROOT", ctrl_name)
 
         # lock loc, scale, & rot of mch
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -132,26 +151,22 @@ class RootBoneSetup(BoneSetup):
         super().__init__(pivot)
 
     def _bone_strategy(self, arm, rig):
-        def_name, mch_name, ctrl_name = self._root_bone_setup(arm, rig)
+        bpy.ops.object.mode_set(mode='EDIT')
+        bone = arm.edit_bones.new("ROOT")
+        bone.head = self.loc
+        bone.tail = self.loc + Vector((0, 0, self.length))
+
+        util.select_bone(rig, "ROOT")
+        bpy.context.active_bone.use_deform = False
 
         bpy.ops.object.mode_set(mode='POSE')
-        util.select_bone(rig, mch_name)
-        pbone = rig.pose.bones[mch_name]
-
-        c = pbone.constraints.new(type='COPY_TRANSFORMS')
-        c.target = rig
-        c.subtarget = ctrl_name
-        c.mix_mode = 'REPLACE'
-        c.target_space = 'WORLD'
-        c.owner_space = 'WORLD'
-
         # util.select_bone(rig, ctrl_name)
         # bpy.context.active_pose_bone.custom_shape = bpy.data.objects["Generic_Gizmo"]
-
-        util.hide_bones(rig, [mch_name, def_name])
+        util.set_bone_rot("ROOT", self.rot)
 
         bpy.ops.object.mode_set(mode='EDIT')
-        return arm.edit_bones[def_name]
+        # return arm.edit_bones[bone.name]
+        return bone
 
     def _root_bone_setup(self, arm, rig):
         bpy.ops.object.mode_set(mode='EDIT')
@@ -170,13 +185,9 @@ class RootBoneSetup(BoneSetup):
         util.select_bone(rig, ctrl_name)
         bpy.context.active_bone.use_deform = False
 
-        util.parent_bones(rig, mch_name, def_name)
-
         # lock loc, scale, & rot of mch
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
-        util.lock_bone(rig, mch_name)
-        util.lock_bone(rig, def_name)
 
         return (def_name, mch_name, ctrl_name)
 

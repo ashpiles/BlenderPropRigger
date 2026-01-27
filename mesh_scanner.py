@@ -35,8 +35,20 @@ class ScanMeshes(bpy.types.Operator):
         scan.scan_volume.half_size = main_box.half_size
         return {'FINISHED'}
 
-    def _cache_meshes_by_region(self, objs, pivots):
+    def _add_to_region(self, obj, region):
         scan = bpy.context.scene.mesh_scan
+        pivot = scan.pivots.add()
+        pivot.name = region.name
+        if region.name != "ROOT_Pivot" or obj is None:
+            new_item = region.region_group.add()
+            new_item.obj = obj
+
+    def _cache_meshes_by_region(self, objs, pivots):
+        for pivot in pivots:
+            if pivot.name == "ROOT_Pivot":
+                self._add_to_region(None, pivot)
+                pivots.remove(pivot)
+
         for obj in objs:
             box = util.get_box([obj])
 
@@ -45,23 +57,16 @@ class ScanMeshes(bpy.types.Operator):
             regions.sort(
                 key=(lambda r: (obj.location - r.location).magnitude)
             )
-            print(regions)
 
             if regions is not None:
                 if len(regions) >= 1:
                     print("added ", obj, "\nto ", regions[0])
-                    pivot = scan.pivots.add()
-                    pivot.name = regions[0].name
-                    new_item = regions[0].region_group.add()
-                    new_item.obj = obj
+                    self._add_to_region(obj, regions[0])
 
                 for r in range(1, len(regions)):
                     if util.is_in_box(regions[r].location, box):
                         print("added ", obj, "\nto ", regions[r])
-                        pivot = scan.pivots.add()
-                        pivot.name = regions[r].name
-                        new_item = regions[r].region_group.add()
-                        new_item.obj = obj
+                        self._add_to_region(obj, regions[r])
 
         print("----------")
         print("")
