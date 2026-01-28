@@ -1,5 +1,6 @@
 import bpy
 from . import bone_setup as bs
+from . import mesh_scanner as scanner
 
 
 class MakePropRig(bpy.types.Operator):
@@ -8,7 +9,6 @@ class MakePropRig(bpy.types.Operator):
     bl_label = "Make prop Auto Rig"
 
     def execute(self, context):
-        bpy.ops.wm.mesh_scanner()
         setup_routine = {
             'ROOT':     [],
             'STANDARD': [],
@@ -19,7 +19,7 @@ class MakePropRig(bpy.types.Operator):
             'HINGE':    []
         }
 
-        scan_result = bpy.context.scene.mesh_scan
+        scan = scanner.ScanMeshes()
         armature = bpy.data.armatures.new("Prop_Armature")
         rig = bpy.data.objects.new("Prop_Armature", armature)
         bpy.context.collection.objects.link(rig)
@@ -27,15 +27,8 @@ class MakePropRig(bpy.types.Operator):
         bpy.context.view_layer.objects.active = rig
         bpy.ops.object.mode_set(mode='EDIT')
 
-        print(scan_result.pivots)
-        # consume pivots to create respective set-up objects
-        # in given order for correct rig creation
-        for region in scan_result.pivots:
-            try:
-                pivot = bpy.context.collection.objects[region.name]
-            except KeyError:
-                pivot = None
-
+        print(scan.pivots)
+        for pivot in scan.pivots:
             if pivot is not None:
                 bone_type = pivot['bone_type']
                 cls = bs.bone_type_class(bone_type)
@@ -46,6 +39,7 @@ class MakePropRig(bpy.types.Operator):
         for setup_type, setups in setup_routine.items():
             for setup in setups:
                 print(setup.pivot_name)
+                print(setup.objs)
                 setup.set_bone(armature, rig)
 
         return {'FINISHED'}

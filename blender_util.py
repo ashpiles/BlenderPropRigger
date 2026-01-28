@@ -6,9 +6,10 @@ from mathutils import (
 )
 
 
-class RegionBox(bpy.types.PropertyGroup):
-    origin: bpy.props.FloatVectorProperty()
-    half_size: bpy.props.FloatVectorProperty()
+class RegionBox():
+    def __init__(self, origin, half_size):
+        self.origin = origin
+        self.half_size = half_size
 
 
 def select_bone(rig, name):
@@ -104,10 +105,9 @@ def get_box(objs: list):
                 max_v.x = max(max_v.x, world_corner.x)
                 max_v.y = max(max_v.y, world_corner.y)
                 max_v.z = max(max_v.z, world_corner.z)
-    box = bpy.context.scene.region_boxes.add()
-    box.origin = (min_v + max_v) * 0.5
-    box.half_size = (max_v - min_v) * 0.5
-    return box
+    origin = (min_v + max_v) * 0.5
+    half_size = (max_v - min_v) * 0.5
+    return RegionBox(origin, half_size)
 
 
 def is_in_box(point: Vector, box: RegionBox):

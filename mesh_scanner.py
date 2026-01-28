@@ -2,53 +2,35 @@ import bpy
 from . import blender_util as util
 
 
-# redundant name but mandatory
-class PivotName(bpy.types.PropertyGroup):
-    name: bpy.props.StringProperty()
-
-
-class MeshScanData(bpy.types.PropertyGroup):
-    scan_volume: bpy.props.PointerProperty(type=util.RegionBox)
-    pivots: bpy.props.CollectionProperty(type=PivotName)
-
-
-class ScanMeshes(bpy.types.Operator):
-    bl_idname = "wm.mesh_scanner"
-    bl_label = "Scan selected meshes and pair them with the appropriate pivot"
-
-    def execute(self, context):
+class ScanMeshes():
+    def __init__(self):
         mesh_objs = []
-        scan = bpy.context.scene.mesh_scan
-        scan.pivots.clear()
 
         for obj in bpy.context.selected_objects:
             if type(obj.data) is bpy.types.Mesh:
                 mesh_objs.append(obj)
 
-        main_box = util.get_box(mesh_objs)
-        pivots = util.get_pivots(main_box)
+        self.main_box = util.get_box(mesh_objs)
+        self.pivots = util.get_pivots(self.main_box)
+        # seems to work on the first attempt or randomly doesn't work
+        # the working context might not be properly cleared
 
-        if len(pivots) >= 1:
-            self._cache_meshes_by_region(mesh_objs, pivots)
-
-        scan.scan_volume.origin = main_box.origin
-        scan.scan_volume.half_size = main_box.half_size
-        return {'FINISHED'}
+        if len(self.pivots) >= 1:
+            self._cache_meshes_by_region(mesh_objs, self.pivots)
 
     def _add_to_region(self, obj, region):
-        scan = bpy.context.scene.mesh_scan
-        pivot = scan.pivots.add()
-        pivot.name = region.name
-        if region.name != "ROOT_Pivot" or obj is None:
+        if region.name != "ROOT_Pivot" and obj is not None:
+            print("added ", obj, "\nto ", region)
             new_item = region.region_group.add()
             new_item.obj = obj
 
     def _cache_meshes_by_region(self, objs, pivots):
+        # Hacky fix for including root
+        root = None
         for pivot in pivots:
             if pivot.name == "ROOT_Pivot":
-                self._add_to_region(None, pivot)
+                root = pivot
                 pivots.remove(pivot)
-
         for obj in objs:
             box = util.get_box([obj])
 
@@ -57,16 +39,16 @@ class ScanMeshes(bpy.types.Operator):
             regions.sort(
                 key=(lambda r: (obj.location - r.location).magnitude)
             )
+            print(regions)
 
             if regions is not None:
                 if len(regions) >= 1:
-                    print("added ", obj, "\nto ", regions[0])
                     self._add_to_region(obj, regions[0])
 
                 for r in range(1, len(regions)):
                     if util.is_in_box(regions[r].location, box):
-                        print("added ", obj, "\nto ", regions[r])
                         self._add_to_region(obj, regions[r])
 
+        pivots.append(root)
         print("----------")
         print("")

@@ -48,6 +48,7 @@ class BoneSetup():
 
     # apply rotation eventually
     def _make_bones(self, bone_name, arm):
+        print("do I have a bone name: ", bone_name)
         bpy.ops.object.mode_set(mode='EDIT')
         def_bone = arm.edit_bones.new("DEF_"+bone_name)
         def_bone.head = self.loc
@@ -64,9 +65,11 @@ class BoneSetup():
         return (def_bone.name, mch_bone.name, ctrl_bone.name)
 
     def _basic_bone_setup(self, arm, rig):
-        bpy.ops.object.mode_set(mode='EDIT')
+        print("GETTING BONE TYPE: ", self.bone_type)
         def_name, mch_name, ctrl_name = self._make_bones(
-            self.bone_type+"_bone", arm,)
+            self.bone_type+"_bone", arm)
+
+        print(self.bone_type, def_name)
         # apply rotation
         util.set_bone_rot(def_name, self.rot)
         util.set_bone_rot(mch_name, self.rot)
@@ -92,6 +95,9 @@ class BoneSetup():
         util.lock_bone(rig, def_name)
 
         return (def_name, mch_name, ctrl_name)
+
+    # why is the def bone empty for standard bones unless there is 2 or more
+    # objs to parent to?
 
     # Manages pivot input for bone creation/ parenting strategy
     def set_bone(self, arm, rig):
@@ -166,30 +172,7 @@ class RootBoneSetup(BoneSetup):
 
         bpy.ops.object.mode_set(mode='EDIT')
         # return arm.edit_bones[bone.name]
-        return bone
-
-    def _root_bone_setup(self, arm, rig):
-        bpy.ops.object.mode_set(mode='EDIT')
-        def_name, mch_name, ctrl_name = self._make_bones(
-            self.bone_type+"_bone", arm,)
-        # apply rotation
-        util.set_bone_rot(def_name, self.rot)
-        util.set_bone_rot(mch_name, self.rot)
-        # Remove deforms of non-deform bones
-        bpy.ops.object.mode_set(mode='POSE')
-        rig.select_set(True)
-
-        util.select_bone(rig, mch_name)
-        bpy.context.active_bone.use_deform = False
-
-        util.select_bone(rig, ctrl_name)
-        bpy.context.active_bone.use_deform = False
-
-        # lock loc, scale, & rot of mch
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-
-        return (def_name, mch_name, ctrl_name)
+        return arm.edit_bones["ROOT"]
 
 
 class StandardBoneSetup(BoneSetup):
@@ -227,6 +210,28 @@ class ChainBoneSetup(BoneSetup):
 class SlideBoneSetup(BoneSetup):
     def __init__(self, pivot):
         super().__init__(pivot)
+
+    def _bone_strategy(self, arm, rig):
+        def_name, mch_name, ctrl_name = self._basic_bone_setup(arm, rig)
+
+        bpy.ops.object.mode_set(mode='POSE')
+        util.select_bone(rig, mch_name)
+        pbone = rig.pose.bones[mch_name]
+
+        c = pbone.constraints.new(type='COPY_LOCATION')
+        c.target = rig
+        c.subtarget = ctrl_name
+        c.mix_mode = 'BEFORE'
+        c.target_space = 'LOCAL'
+        c.owner_space = 'LOCAL'
+
+        # util.select_bone(rig, ctrl_name)
+        # bpy.context.active_pose_bone.custom_shape = bpy.data.objects["Generic_Gizmo"]
+
+        util.hide_bones(rig, [mch_name, def_name])
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        return arm.edit_bones[def_name]
 
 
 class SquishBoneSetup(BoneSetup):
